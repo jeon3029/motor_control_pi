@@ -21,6 +21,7 @@ import websockets
 from PyQt5 import QtSql
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
+import time
 
 
 # 환경설정
@@ -52,7 +53,7 @@ class Component():
         self.draw = ImageDraw.Draw(self.screenImage)    # PIL draw 핸들
 
     # 모드버튼 눌려 모드 진입할 때 실행
-    def whenActivated(self):
+    def whenActivated(self): 
         pass
 
     # 표시할 이미지 업데이트
@@ -113,7 +114,6 @@ class CalendarComponent(Component):
     # 현재시간을 확인해 표시할 이미지 만듬.
     def update(self):
         super().update()
-
         # 현재시간 확인
         now = self.getCurrentTime()
 
@@ -153,7 +153,8 @@ class VoiceComponent(Component):
         self.chunk = int(self.rate/10)   
         self.encoding = 'LINEAR16'   # enums.RecognitionConfig.AudioEncoding.LINEAR16
         self.max_alternatives = 1
-        self.language_code = 'ko-KR'
+        #self.language_code = 'ko-KR'
+        self.language_code = 'en-US'
 
         # google-cloud-speech request config 설정
         self.client = speech.SpeechClient()
@@ -396,7 +397,6 @@ def buttonPressed(channel):
 
     # 모드버튼 눌리면 모드 전환
     if channel == MODE_BUTTON:  
-        
         mode_index += 1     # 0이었으면 1, 1이었으면 2, 2였으면 0
         if mode_index == 3:
             mode_index = 0
@@ -407,6 +407,60 @@ def buttonPressed(channel):
     if channel == ACT_BUTTON:
         mode.actButtonPressed()
 
+class Database:
+    def __init__(self):
+        #super().__init()
+        self.db = QtSql.QSqlDatabase.addDatabase('QMYSQL')
+        self.db.setHostName("3.34.124.67")
+        self.db.setDatabaseName("15_10")
+        self.db.setUserName("15_10")
+        self.db.setPassword("1234")
+        ok = self.db.open()
+        print("database open : " + str(ok))
+
+    # for car control
+    def command1Query(self,cmd,arg):
+        self.query.prepare("insert into command1 (time, cmd_string, arg_string, is_finish)\
+        values(:time, :cmd, :arg, :finish)");
+        time = QDateTime().currentDateTime()
+        self.query.bindValue(":time", time)
+        self.query.bindValue(":cmd", cmd)
+        self.query.bindValue(":arg", arg)
+        self.query.bindValue(":finish", 0)
+        self.query.exec()
+
+    # for sensehat control
+    def command2Query(self,text,cnt):
+        self.query.prepare("insert into command2 (time, text, is_finish,count)\
+        values(:time, :text, :finish, :cnt)");
+        time = QDateTime().currentDateTime()
+        self.query.bindValue(":time", time)
+        self.query.bindValue(":text", text)
+        self.query.bindValue(":cnt", cnt)
+        self.query.bindValue(":finish", 0)
+        self.query.exec()   
+
+    def right(self):
+        print("right")
+        self.command1Query("right","1 sec")
+    def left(self):
+        print("left")
+        self.command1Query("left","1 sec")
+    def go(self):
+        print("go")
+        self.command1Query("go","1 sec")
+    def stop(self):
+        print("stop")
+        self.command1Query("stop","1 sec")
+    def mid(self):
+        print("mid")
+        self.command1Query("mid","1 sec")
+    def mic_text(self,text,cnt):
+        print("mic - text")
+        self.command2Query(text,cnt)
+
+
+th = None
 # 메인 
 def main():
     # oled 디스플레이 초기화
@@ -422,10 +476,18 @@ def main():
     global mode_index
     global mode
     mode = components[mode_index]
+    print("mode init finished. Current mode : Clock Mode")
 
     # 버튼 초기화
     initButton()
     print("button init finished")
+
+    # database init
+    global th
+    th=Database()
+    
+    print("database init finished")
+
     # 무한반복
     # 키보드 인터럽트(Ctrl-C)가 있으면 종료
     try:
