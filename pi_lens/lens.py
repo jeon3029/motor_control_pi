@@ -264,7 +264,6 @@ class VoiceComponent(Component):
 
             # 확실성 가장 높은 alternative의 해석
             transcript = result.alternatives[0].transcript
-            global db
                         
             # transcript 중 예전에 사용자에게 보여주었던 앞부분은 제외하고 변경이 있는부분, 추가된 부분만 보여주자.
             tr = transcript.split() # transcript list화.
@@ -314,13 +313,13 @@ class VoiceComponent(Component):
             # command_list와 words_to_show는 동일한 내용이지만 command_list는 사용 후 소모됨.
             self.command_list = self.words_to_show
             if any("go" in s for s in self.command_list):
-                db.go()
+                Database().go()
             elif any("stop" in s for s in self.command_list):
-                db.stop()
+                Database().stop()
             elif any("left" in s for s in self.command_list):
-                db.left()
+                Database().left()
             if any("right" in s for s in self.command_list):
-                db.right()
+                Database().right()
             
             
             
@@ -418,17 +417,24 @@ def buttonPressed(channel):
     if channel == ACT_BUTTON:
         mode.actButtonPressed()
 
-class Database(QMainWindow):
+
+class Singleton(object):
+    _instance = None
+    def __new__(class_, *args, **kwargs):
+        if not isinstance(class_._instance, class_):
+            class_._instance = object.__new__(class_, *args, **kwargs)
+        return class_._instance
+
+class Database(Singleton):
     def __init__(self):
-        super().__init__()
-        self.db = QtSql.QSqlDatabase.addDatabase('QMYSQL')
-        self.db.setHostName("3.34.124.67")
-        self.db.setDatabaseName("15_10")
-        self.db.setUserName("15_10")
-        self.db.setPassword("1234")
-        ok = self.db.open()
-        
-        print("database open : " + str(ok))
+        global db
+        db = QtSql.QSqlDatabase.addDatabase("QMYSQL")
+        db.setHostName("3.34.124.67")
+        db.setDatabaseName("15_10")
+        db.setUserName("15_10")
+        db.setPassword("1234")
+        ok = db.open()
+        print("database open : " + str(ok)) 
 
     # for car control
     def command1Query(self,cmd,arg):
@@ -497,7 +503,9 @@ def main():
 
     # database init
     global db
-    db = Database()
+    # app = QApplication(sys.argv)
+    
+
     print("database init finished")
 
     # 무한반복
