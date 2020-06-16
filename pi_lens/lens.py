@@ -44,6 +44,7 @@ serverURI = "ws://192.168.35.176:5678" #websocket server
 # mode 초기화
 components=[]  
 mode_index = 0
+is_mic_active=False
 mode = None
 db = None
 
@@ -96,7 +97,6 @@ class Component():
 
 # 시계 콤포넌트
 class ClockComponent(Component):
-    
     # 현재시간을 확인해 표시할 이미지 만듬.
     def update(self):
         super().update()
@@ -108,10 +108,28 @@ class ClockComponent(Component):
         self.draw.text((2,30), now.strftime('%p'), font = font_small, fill=1 ) #am/pm
         self.draw.text((0,50), now.strftime('%I:%M'), font = font_big, fill=1 ) # 시:분
         self.draw.text((40,80), now.strftime('%S'), font = font_small, fill=1 ) # :초
+    def actButtonPressed(self):
+        super().actButtonPressed()
+
+        # 플래그 토글
+        global is_mic_active
+        is_mic_active = not is_mic_active  
+        print(is_mic_active)
+        # 버튼 눌리면 마이크 스트림 스레드 & websocket connection 생성 
+        if is_mic_active == True:
+            #버튼이 눌릴 때마다 새로운 오브젝트 생성.
+            #mic_stream_thread = threading.Thread(target = self.doVoiceRecognition)
+            global components
+            mic_stream_thread = threading.Thread(target = components[2].doVoiceRecognition)
+            mic_stream_thread.start()
+            components[2].whenActivated()
+            websocket_thread = threading.Thread(target = components[2].doWebsocketClient)
+            websocket_thread.start()
+        else:
+            pass
 
 # 달력 콤포넌트
 class CalendarComponent(Component):
-    
     # 현재시간을 확인해 표시할 이미지 만듬.
     def update(self):
         super().update()
@@ -132,6 +150,24 @@ class CalendarComponent(Component):
 
         yoil = '월화수목금토일'[now.weekday()] # weekday(): 요일을 0~6으로 리턴
         self.draw.text(( self.getTextCenterAlignXY(yoil+'요일', font_small)[0],95), yoil+'요일', font = font_small, fill=1 ) # 요일
+    def actButtonPressed(self):
+        super().actButtonPressed()
+        # 플래그 토글
+        global is_mic_active
+        is_mic_active = not is_mic_active  
+        print(is_mic_active)
+        # 버튼 눌리면 마이크 스트림 스레드 & websocket connection 생성 
+        if is_mic_active == True:
+            #버튼이 눌릴 때마다 새로운 오브젝트 생성.
+            #mic_stream_thread = threading.Thread(target = self.doVoiceRecognition)
+            global components
+            mic_stream_thread = threading.Thread(target = components[2].doVoiceRecognition)
+            components[2].whenActivated()
+            mic_stream_thread.start()
+            websocket_thread = threading.Thread(target = components[2].doWebsocketClient)
+            websocket_thread.start()
+        else:
+            pass
 
 # 음성인식 콤포넌트
 class VoiceComponent(Component):
@@ -175,13 +211,13 @@ class VoiceComponent(Component):
         
     def update(self):
         super().update()
-        
+        global mode_index
         # 보이스 입력 작동중일땐 입력받은 내용 디스플레이
-        if self.is_mic_active is True:   
-            text = ' '.join(self.words_to_show) + '\n...' # 마이크 작동중 표시 추가   
+        if mode_index ==0 :   
+            text = 'motor control mode\n' + ' '.join(self.words_to_show) + '\n...' # 마이크 작동중 표시 추가   
         # 마이크 버튼 눌리지 않았다면
         else:
-            text = 'press\nACTION\nfor\nvoice\ninput'
+            text = 'sensehat control mode\n' + ' '.join(self.words_to_show) + '\n...' # 마이크 작동중 표시 추가   
 
         # 화면 폭에 맞추어 줄바꿈
         text = self.textMultiliner(text, font_small)    
@@ -189,21 +225,22 @@ class VoiceComponent(Component):
         self.draw.text( self.getTextCenterAlignXY(text, font_small), text, font = font_small, fill=1 )
 
     # ACT_BUTTON 한번 누르면 active, 다시 한 번 누르면 idle
-    def actButtonPressed(self):
-        super().actButtonPressed()
+    # def actButtonPressed(self):
+    #     super().actButtonPressed()
 
-        # 플래그 토글
-        self.is_mic_active = not self.is_mic_active  
+    #     # 플래그 토글
+    #     self.is_mic_active = not self.is_mic_active  
 
-        # 버튼 눌리면 마이크 스트림 스레드 & websocket connection 생성 
-        if self.is_mic_active == True:
-            #버튼이 눌릴 때마다 새로운 오브젝트 생성.
-            mic_stream_thread = threading.Thread(target = self.doVoiceRecognition)
-            mic_stream_thread.start()
-            websocket_thread = threading.Thread(target = self.doWebsocketClient)
-            websocket_thread.start()
-        else:
-            pass
+    #     # 버튼 눌리면 마이크 스트림 스레드 & websocket connection 생성 
+    #     if self.is_mic_active == True:
+    #         pass
+    #         #버튼이 눌릴 때마다 새로운 오브젝트 생성.
+    #         mic_stream_thread = threading.Thread(target = self.doVoiceRecognition)
+    #         mic_stream_thread.start()
+    #         # websocket_thread = threading.Thread(target = self.doWebsocketClient)
+    #         # websocket_thread.start()
+    #     else:
+    #         pass
 
     def doWebsocketClient(self):
         try:
@@ -264,21 +301,24 @@ class VoiceComponent(Component):
 
             # 확실성 가장 높은 alternative의 해석
             transcript = result.alternatives[0].transcript
-
-            if(transcript.find("go")!=-1):
-                Database().motor_control("go")
-            elif(transcript.find("left")!=-1):
-                Database().motor_control("left")
-            elif(transcript.find("right")!=-1):
-                Database().motor_control("right")
-            elif(transcript.find("stop")!=-1):
-                Database().motor_control("stop")
-            elif(transcript.find("mid")!=-1):
-                Database().motor_control("mid")
-            elif(transcript.find("fast")!=-1):
-                Database().motor_control("fast")
-            elif(transcript.find("slow")!=-1):
-                Database().motor_control("slow")
+            global mode_index
+            if mode_index==0:
+                if(transcript.find("go")!=-1):
+                    Database().motor_control("go")
+                elif(transcript.find("left")!=-1):
+                    Database().motor_control("left")
+                elif(transcript.find("right")!=-1):
+                    Database().motor_control("right")
+                elif(transcript.find("stop")!=-1):
+                    Database().motor_control("stop")
+                elif(transcript.find("mid")!=-1):
+                    Database().motor_control("mid")
+                elif(transcript.find("fast")!=-1):
+                    Database().motor_control("fast")
+                elif(transcript.find("slow")!=-1):
+                    Database().motor_control("slow")
+            else:
+                Database().mic_text(transcript,3)
 
             # transcript 중 예전에 사용자에게 보여주었던 앞부분은 제외하고 변경이 있는부분, 추가된 부분만 보여주자.
             tr = transcript.split() # transcript list화.
@@ -431,7 +471,7 @@ def buttonPressed(channel):
     # 모드버튼 눌리면 모드 전환
     if channel == MODE_BUTTON:  
         mode_index += 1     # 0이었으면 1, 1이었으면 2, 2였으면 0
-        if mode_index == 3:
+        if mode_index == 2:
             mode_index = 0
         mode = components[mode_index]
         mode.whenActivated()    # 모드 진입할 때 실행되어야 하는 코드
@@ -519,7 +559,11 @@ def main():
     try:
         while True:
             # 현재 모드에 따라 업데이트 실행
-            mode.update()
+            global is_mic_active
+            if is_mic_active == 0:
+                mode.update()
+            else:
+                components[2].update()
 
             # oled 디스플레이 업데이트
             flippedImage = mode.screenImage.transpose(Image.FLIP_LEFT_RIGHT) # 화면을 기기에 맞추어 세로로 회전, 거울상만들기.
