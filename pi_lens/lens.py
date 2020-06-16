@@ -14,8 +14,8 @@ import pyaudio
 import queue
 import threading    # 마이크 스트림 입력을 위한 스레드 
 # websockets 관련
-import asyncio
-import websockets
+# import asyncio
+# import websockets
 
 #db
 from PyQt5 import QtSql
@@ -39,7 +39,7 @@ MODE_BUTTON, ACT_BUTTON = 17, 27 # 버튼 GPIO 핀할당
 
 #serverURI = "ws://192.168.0.103:5678" #websocket server
 #serverURI = "ws://192.168.35.61:5678" #websocket server
-serverURI = "ws://192.168.35.176:5678" #websocket server
+# serverURI = "ws://192.168.35.176:5678" #websocket server
 
 # mode 초기화
 components=[]  
@@ -175,60 +175,26 @@ class VoiceComponent(Component):
         
     def update(self):
         super().update()
-        
         # 보이스 입력 작동중일땐 입력받은 내용 디스플레이
-        if self.is_mic_active is True:   
-            text = ' '.join(self.words_to_show) + '\n...' # 마이크 작동중 표시 추가   
+        global mode_index
+        if mode_index == 2:   
+            text = 'motor\n  control\n'+' '.join(self.words_to_show) + '\n...' # 마이크 작동중 표시 추가   
         # 마이크 버튼 눌리지 않았다면
-        else:
-            text = 'press\nACTION\nfor\nvoice\ninput'
-
+        elif mode_index == 3:
+            text = 'sensehat\n  control'+' '.join(self.words_to_show) + '\n...' # 마이크 작동중 표시 추가   
         # 화면 폭에 맞추어 줄바꿈
-        text = self.textMultiliner(text, font_small)    
+        text = self.textMultiliner(text, font_small)
         # 화면 중앙에 정렬해 표시
-        self.draw.text( self.getTextCenterAlignXY(text, font_small), text, font = font_small, fill=1 )
+        self.draw.text( self.getTextCenterAlignXY(text, font_small), text, font = font_small, fill = 1 )
 
     # ACT_BUTTON 한번 누르면 active, 다시 한 번 누르면 idle
     def actButtonPressed(self):
         super().actButtonPressed()
+        #버튼이 눌릴 때마다 새로운 오브젝트 생성.
+        mic_stream_thread = threading.Thread(target = self.doVoiceRecognition)
+        mic_stream_thread.start()
+        #TODO action버튼 다시 눌렀을 때 mic off처리
 
-        # 플래그 토글
-        self.is_mic_active = not self.is_mic_active  
-
-        # 버튼 눌리면 마이크 스트림 스레드 & websocket connection 생성 
-        if self.is_mic_active == True:
-            #버튼이 눌릴 때마다 새로운 오브젝트 생성.
-            mic_stream_thread = threading.Thread(target = self.doVoiceRecognition)
-            mic_stream_thread.start()
-            websocket_thread = threading.Thread(target = self.doWebsocketClient)
-            websocket_thread.start()
-        else:
-            pass
-
-    def doWebsocketClient(self):
-        try:
-            asyncio.run(self.websocket_client())
-        except websockets.WebSocketException:
-            print('네트워크 확인')
-
-    async def websocket_client(self):
-        async with websockets.connect(serverURI) as websocket:
-            while True:   
-                if self.command_list is not []:
-                    for command in self.command_list:
-                        #await websocket.send(command)
-                        #print(f"{command} sent")
-                        pass
-                        #resp = await websocket.recv()
-                        #print(f"{resp} received.")
-
-                    self.command_list = [] # 사용한 후엔 소모됨
-                else:
-                    pass  
-
-                # ACTION 버튼 눌리면 루프 중지
-                if self.is_mic_active == False:
-                    break
 
     def doVoiceRecognition(self):        
         # mic로부터 오디오스트림 생성      
@@ -249,9 +215,10 @@ class VoiceComponent(Component):
     def listen_print_loop(self,responses):
         # response 처리
         for response in responses:
-
+            print('listen')
             # act_button 눌리는지 감지해 루프 중지-InputEnded 예외발생       
-            if self.is_mic_active is False:
+            global mode_index
+            if mode_index==0 or mode_index==1:
                 raise InputEnded()
 
             # results를 포함하지 않는다면
@@ -264,21 +231,26 @@ class VoiceComponent(Component):
 
             # 확실성 가장 높은 alternative의 해석
             transcript = result.alternatives[0].transcript
-
-            if(transcript.find("go")!=-1):
-                Database().motor_control("go")
-            elif(transcript.find("left")!=-1):
-                Database().motor_control("left")
-            elif(transcript.find("right")!=-1):
-                Database().motor_control("right")
-            elif(transcript.find("stop")!=-1):
-                Database().motor_control("stop")
-            elif(transcript.find("mid")!=-1):
-                Database().motor_control("mid")
-            elif(transcript.find("fast")!=-1):
-                Database().motor_control("fast")
-            elif(transcript.find("slow")!=-1):
-                Database().motor_control("slow")
+            if mode_index == 2:
+                if(transcript.find("go")!=-1):
+                    Database().motor_control("go")
+                elif(transcript.find("left")!=-1):
+                    Database().motor_control("left")
+                elif(transcript.find("right")!=-1):
+                    Database().motor_control("right")
+                elif(transcript.find("stop")!=-1):
+                    Database().motor_control("stop")
+                elif(transcript.find("mid")!=-1):
+                    Database().motor_control("mid")
+                elif(transcript.find("fast")!=-1):
+                    Database().motor_control("fast")
+                elif(transcript.find("slow")!=-1):
+                    Database().motor_control("slow")
+                print(transcript)
+            else:
+                #TODO : calc count
+                Database().mic_text(transcript,1)
+                print(transcript)
 
             # transcript 중 예전에 사용자에게 보여주었던 앞부분은 제외하고 변경이 있는부분, 추가된 부분만 보여주자.
             tr = transcript.split() # transcript list화.
@@ -326,23 +298,8 @@ class VoiceComponent(Component):
                 self.lasttime_you_said = tr 
             # command_list와 words_to_show는 동일한 내용이지만 command_list는 사용 후 소모됨.
             self.command_list = self.words_to_show
-            
-            # # DB TODO : 한 번에 1개씩이 아닌 2개,3개혹은 1개가 입력됨
-            # if any((s.find("go")!=-1) for s in self.command_list):
-            #     Database().motor_control("go")
-            # elif any((s.find("stop")!=-1) for s in self.command_list):
-            #     Database().motor_control("stop")
-            # elif any((s.find("left")!=-1) for s in self.command_list):
-            #     Database().motor_control("left")
-            # elif any((s.find("right")!=-1) for s in self.command_list):
-            #     Database().motor_control("right")
-            # elif any((s.find("middle")!=-1) for s in self.command_list):
-            #     Database().motor_control("middle")
-            # elif any((s.find("slow")!=-1) for s in self.command_list):
-            #     Database().motor_control("slow")
-            # elif any((s.find("fast")!=-1) for s in self.command_list):
-            #     Database().motor_control("fast")
-            
+            # TODO : db에 쿼리가 여러번 날아감
+            print('listen end')
             
             
             
@@ -430,15 +387,36 @@ def buttonPressed(channel):
 
     # 모드버튼 눌리면 모드 전환
     if channel == MODE_BUTTON:  
-        mode_index += 1     # 0이었으면 1, 1이었으면 2, 2였으면 0
-        if mode_index == 3:
+        if mode_index == 0:
+            mode_index = 1
+        elif mode_index == 1:
+            mode_index = 0
+        elif mode_index == 2:
+            mode_index = 1
+        else:
             mode_index = 0
         mode = components[mode_index]
         mode.whenActivated()    # 모드 진입할 때 실행되어야 하는 코드
 
     # mic버튼 눌리면 현재의 mode.actButtonPressed() 실행
-    if channel == ACT_BUTTON:
-        mode.actButtonPressed()
+    if channel == ACT_BUTTON: # 0 to 2 & 1 to 3
+        if mode_index == 0:
+            mode_index = 2
+        elif mode_index == 1:
+            mode_index = 3
+        elif mode_index == 2:
+            mode_index = 0
+        else:
+            mode_index = 1
+        if mode_index != 3:
+            mode = components[mode_index]
+            mode.whenActivated()
+            mode.actButtonPressed()
+        else:
+            mode = components[2]
+            components[2].whenActivated()
+            components[2].actButtonPressed()
+            
 
 
 class Singleton(object):
@@ -446,24 +424,25 @@ class Singleton(object):
     def __new__(class_, *args, **kwargs):
         if not isinstance(class_._instance, class_):
             class_._instance = object.__new__(class_, *args, **kwargs)
+            db = QtSql.QSqlDatabase.addDatabase("QMYSQL")
+            db.setHostName("3.34.124.67")
+            db.setDatabaseName("15_10")
+            db.setUserName("15_10")
+            db.setPassword("1234")
+            ok = db.open()
+            print("database open : " + str(ok)) 
         return class_._instance
 
 class Database(Singleton):
     def __init__(self):
-        global db
-        db = QtSql.QSqlDatabase.addDatabase("QMYSQL")
-        db.setHostName("3.34.124.67")
-        db.setDatabaseName("15_10")
-        db.setUserName("15_10")
-        db.setPassword("1234")
-        ok = db.open()
-        print("database open : " + str(ok)) 
+        # global db
+        pass
 
     # for car control
     def command1Query(self,cmd,arg):
         self.query = QtSql.QSqlQuery("select * from command1")
         self.query.prepare("insert into command1 (time, cmd_string, arg_string, is_finish)\
-        values(:time, :cmd, :arg, :finish)");
+        values(:time, :cmd, :arg, :fsnish)");
         time = QDateTime().currentDateTime()
         self.query.bindValue(":time", time)
         self.query.bindValue(":cmd", cmd)
@@ -502,7 +481,7 @@ def main():
 
     # mode 초기화
     global components
-    components=[ClockComponent(), CalendarComponent(), VoiceComponent()]  # 시계모드 & 달력모드
+    components=[ClockComponent(), CalendarComponent(), VoiceComponent()]  # 시계모드 & 달력모드 / Act1(motor), Act2(motor)
     global mode_index
     global mode
     mode = components[mode_index]
@@ -520,7 +499,6 @@ def main():
         while True:
             # 현재 모드에 따라 업데이트 실행
             mode.update()
-
             # oled 디스플레이 업데이트
             flippedImage = mode.screenImage.transpose(Image.FLIP_LEFT_RIGHT) # 화면을 기기에 맞추어 세로로 회전, 거울상만들기.
             rotatedImage = flippedImage.transpose(Image.ROTATE_90)  # 화면을 가로로 돌림
