@@ -22,7 +22,7 @@ from PyQt5 import QtSql
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 import time
-
+import sys
 
 # 환경설정
 disp_width, disp_height = 64, 128 # oled portrait layout
@@ -45,6 +45,7 @@ serverURI = "ws://192.168.35.176:5678" #websocket server
 components=[]  
 mode_index = 0
 mode = None
+db = None
 
 # 콤포넌트 (모드) 추상 클래스
 class Component():
@@ -215,11 +216,11 @@ class VoiceComponent(Component):
             while True:   
                 if self.command_list is not []:
                     for command in self.command_list:
-                        await websocket.send(command)
-                        print(f"{command} sent")
-                        
-                        resp = await websocket.recv()
-                        print(f"{resp} received.")
+                        #await websocket.send(command)
+                        #print(f"{command} sent")
+                        pass
+                        #resp = await websocket.recv()
+                        #print(f"{resp} received.")
 
                     self.command_list = [] # 사용한 후엔 소모됨
                 else:
@@ -255,7 +256,7 @@ class VoiceComponent(Component):
 
             # results를 포함하지 않는다면
             if not response.results:
-                continue    
+                continue
             # 만약 response가 둘 이상의 result를 포함하고 있더라도 result[0] 이 확정(is_final=True) 되면 이전의 result[1]이 다음번에 result[0]이 되어 응답으로 오게되므로 우리는 results[0]만 고려한다. 
             result = response.results[0]
             if not result.alternatives:
@@ -263,7 +264,8 @@ class VoiceComponent(Component):
 
             # 확실성 가장 높은 alternative의 해석
             transcript = result.alternatives[0].transcript
-            
+            global db
+                        
             # transcript 중 예전에 사용자에게 보여주었던 앞부분은 제외하고 변경이 있는부분, 추가된 부분만 보여주자.
             tr = transcript.split() # transcript list화.
             tr_words_count = len(tr) 
@@ -311,6 +313,15 @@ class VoiceComponent(Component):
 
             # command_list와 words_to_show는 동일한 내용이지만 command_list는 사용 후 소모됨.
             self.command_list = self.words_to_show
+            if any("go" in s for s in self.command_list):
+                db.go()
+            elif any("stop" in s for s in self.command_list):
+                db.stop()
+            elif any("left" in s for s in self.command_list):
+                db.left()
+            if any("right" in s for s in self.command_list):
+                db.right()
+            
             
             
             
@@ -407,19 +418,21 @@ def buttonPressed(channel):
     if channel == ACT_BUTTON:
         mode.actButtonPressed()
 
-class Database:
+class Database(QMainWindow):
     def __init__(self):
-        #super().__init()
+        super().__init__()
         self.db = QtSql.QSqlDatabase.addDatabase('QMYSQL')
         self.db.setHostName("3.34.124.67")
         self.db.setDatabaseName("15_10")
         self.db.setUserName("15_10")
         self.db.setPassword("1234")
         ok = self.db.open()
+        
         print("database open : " + str(ok))
 
     # for car control
     def command1Query(self,cmd,arg):
+        self.query = QtSql.QSqlQuery("select * from command1")
         self.query.prepare("insert into command1 (time, cmd_string, arg_string, is_finish)\
         values(:time, :cmd, :arg, :finish)");
         time = QDateTime().currentDateTime()
@@ -431,6 +444,7 @@ class Database:
 
     # for sensehat control
     def command2Query(self,text,cnt):
+        self.query = QtSql.QSqlQuery("select * from command2")
         self.query.prepare("insert into command2 (time, text, is_finish,count)\
         values(:time, :text, :finish, :cnt)");
         time = QDateTime().currentDateTime()
@@ -460,7 +474,6 @@ class Database:
         self.command2Query(text,cnt)
 
 
-th = None
 # 메인 
 def main():
     # oled 디스플레이 초기화
@@ -483,13 +496,11 @@ def main():
     print("button init finished")
 
     # database init
-    global th
-    th=Database()
-    
+    global db
+    db = Database()
     print("database init finished")
 
     # 무한반복
-    # 키보드 인터럽트(Ctrl-C)가 있으면 종료
     try:
         while True:
             # 현재 모드에 따라 업데이트 실행
@@ -498,10 +509,11 @@ def main():
             # oled 디스플레이 업데이트
             flippedImage = mode.screenImage.transpose(Image.FLIP_LEFT_RIGHT) # 화면을 기기에 맞추어 세로로 회전, 거울상만들기.
             rotatedImage = flippedImage.transpose(Image.ROTATE_90)  # 화면을 가로로 돌림
-
+            # 화면 출력
             oled.image(rotatedImage)
             oled.display()
 
+    # 키보드 인터럽트(Ctrl-C)가 있으면 종료
     except KeyboardInterrupt:
         print("사용자에 의해 실행을 중단합니다...")
         oled.clear()
