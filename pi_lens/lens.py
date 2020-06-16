@@ -148,7 +148,7 @@ class VoiceComponent(Component):
         self.words_to_show=[]
         # 웹소켓 서버로 전달할 명령어 - words_to_show는 화면에서 사라지면 안되지만 command_list는 사용하면 소모됨
         self.command_list=[]
-
+        self.before=""
         # 레코딩 특성
         self.rate = 16000   # Hz
         self.chunk = int(self.rate/10)   
@@ -264,7 +264,22 @@ class VoiceComponent(Component):
 
             # 확실성 가장 높은 alternative의 해석
             transcript = result.alternatives[0].transcript
-                        
+
+            if(transcript.find("go")!=-1):
+                Database().motor_control("go")
+            elif(transcript.find("left")!=-1):
+                Database().motor_control("left")
+            elif(transcript.find("right")!=-1):
+                Database().motor_control("right")
+            elif(transcript.find("stop")!=-1):
+                Database().motor_control("stop")
+            elif(transcript.find("mid")!=-1):
+                Database().motor_control("mid")
+            elif(transcript.find("fast")!=-1):
+                Database().motor_control("fast")
+            elif(transcript.find("slow")!=-1):
+                Database().motor_control("slow")
+
             # transcript 중 예전에 사용자에게 보여주었던 앞부분은 제외하고 변경이 있는부분, 추가된 부분만 보여주자.
             tr = transcript.split() # transcript list화.
             tr_words_count = len(tr) 
@@ -309,17 +324,25 @@ class VoiceComponent(Component):
                     self.words_to_show.append(tr[j])
 
                 self.lasttime_you_said = tr 
-
             # command_list와 words_to_show는 동일한 내용이지만 command_list는 사용 후 소모됨.
             self.command_list = self.words_to_show
-            if any("go" in s for s in self.command_list):
-                Database().go()
-            elif any("stop" in s for s in self.command_list):
-                Database().stop()
-            elif any("left" in s for s in self.command_list):
-                Database().left()
-            if any("right" in s for s in self.command_list):
-                Database().right()
+            
+            # # DB TODO : 한 번에 1개씩이 아닌 2개,3개혹은 1개가 입력됨
+            # if any((s.find("go")!=-1) for s in self.command_list):
+            #     Database().motor_control("go")
+            # elif any((s.find("stop")!=-1) for s in self.command_list):
+            #     Database().motor_control("stop")
+            # elif any((s.find("left")!=-1) for s in self.command_list):
+            #     Database().motor_control("left")
+            # elif any((s.find("right")!=-1) for s in self.command_list):
+            #     Database().motor_control("right")
+            # elif any((s.find("middle")!=-1) for s in self.command_list):
+            #     Database().motor_control("middle")
+            # elif any((s.find("slow")!=-1) for s in self.command_list):
+            #     Database().motor_control("slow")
+            # elif any((s.find("fast")!=-1) for s in self.command_list):
+            #     Database().motor_control("fast")
+            
             
             
             
@@ -460,24 +483,12 @@ class Database(Singleton):
         self.query.bindValue(":finish", 0)
         self.query.exec()   
 
-    def right(self):
-        print("right")
-        self.command1Query("right","1 sec")
-    def left(self):
-        print("left")
-        self.command1Query("left","1 sec")
-    def go(self):
-        print("go")
-        self.command1Query("go","1 sec")
-    def stop(self):
-        print("stop")
-        self.command1Query("stop","1 sec")
-    def mid(self):
-        print("mid")
-        self.command1Query("mid","1 sec")
+    def motor_control(self,cmd):
+        print(cmd)
+        self.command1Query(cmd,"1 sec")
     def mic_text(self,text,cnt):
         print("mic - text")
-        self.command2Query(text,cnt)
+        self.command2Query(text,cnt)   
 
 
 # 메인 
@@ -502,10 +513,6 @@ def main():
     print("button init finished")
 
     # database init
-    global db
-    # app = QApplication(sys.argv)
-    
-
     print("database init finished")
 
     # 무한반복
