@@ -29,11 +29,9 @@ disp_width, disp_height = 64, 128 # oled portrait layout
 RST, DC, SPI_PORT, SPI_DEVICE = 24, 25, 0, 0 # OLED pin 설정
 TimeZone = timezone(timedelta(hours=+9)) # 서울표준시 사용
 
-#font_small = ImageFont.truetype("ubuntu.ttf",15)    # 폰트 준비
-font_small = ImageFont.truetype("nanum.ttf",15)    # 폰트 준비
-
-#font_big = ImageFont.truetype("ubuntu.ttf", 25)
-font_big = ImageFont.truetype("nanum.ttf", 25)
+# 폰트 준비
+font_small = ImageFont.truetype("sunflower.ttf",15)   
+font_big = ImageFont.truetype("sunflower.ttf", 25)
 
 MODE_BUTTON, ACT_BUTTON = 17, 27 # 버튼 GPIO 핀할당
 

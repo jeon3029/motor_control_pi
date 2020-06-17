@@ -13,9 +13,9 @@ speed = 125 #
 dcMotor.setSpeed(speed)
 servo = mh._pwm
 servo.setPWMFreq(60)
-R_limit = 450
-L_limit = 250
-mid_center = 350
+R_limit = 260
+L_limit = 465
+mid_center = 365
 L_itv = L_limit-mid_center
 R_itv = R_limit-mid_center
 
@@ -51,7 +51,7 @@ class pollingThread(QThread):
 
 			if is_finish == 0 :
               	#detect new command
-				print(cmdTime.toString(), cmdType, cmdArg)
+				print("motorhat control",cmdTime.toString(), cmdType, cmdArg)
 
 				#update
 				query = QtSql.QSqlQuery("update command1 set is_finish=1 where is_finish=0");
@@ -78,7 +78,7 @@ class pollingThread(QThread):
 			count = query.record().value(3)
 			if is_finish == 0 :
 				#detect new command
-				print(cmdTime.toString(), cmdType, cmdArg)
+				print("sensehat control",cmdTime.toString(), cmdText, count)
 				#update
 				query = QtSql.QSqlQuery("update command2 set is_finish=1 where is_finish=0");
 				#sensehat
