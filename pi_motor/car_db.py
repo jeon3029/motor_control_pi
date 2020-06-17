@@ -59,8 +59,6 @@ class pollingThread(QThread):
 				#motor
 				if cmdType == "go":
 					self.go()
-				elif cmdType == "back": 
-					self.down()
 				elif cmdType == "left": 
 					self.left()
 				elif cmdType == "right": 
@@ -73,6 +71,8 @@ class pollingThread(QThread):
 					self.fast()	
 				elif cmdType == "slow":
 					self.slow()
+				elif cmdType == "back":
+					self.back()
           #--------------- sensehat----------------------
 			query = QtSql.QSqlQuery("select * from command2 order by time desc limit 1");
 			query.next()
@@ -92,7 +92,7 @@ class pollingThread(QThread):
 				cmdText = query.record().value(1)
 				is_finish = query.record().value(2)
 				count = query.record().value(3)
-				print(cmdTime.toString(), cmdText, count)
+				print("sensehat control",cmdTime.toString(), cmdText, count)
 				#update
 				query = QtSql.QSqlQuery("update command2 set is_finish=1 where is_finish=0");
 				#sensehat
@@ -113,11 +113,11 @@ class pollingThread(QThread):
 		print("MOTOR STOP")
 		dcMotor.run(Raspi_MotorHAT.RELEASE)
 
-
-	def down(self):
+	def back(self):
 		print("MOTOR BACK")
+		dcMotor.setSpeed(30)
 		dcMotor.run(Raspi_MotorHAT.BACKWARD)
-		time.sleep(1)
+		time.sleep(3)
 		dcMotor.run(Raspi_MotorHAT.RELEASE)
 
 	def left(self):
