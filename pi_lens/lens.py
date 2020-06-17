@@ -419,23 +419,24 @@ def buttonPressed(channel):
             components[2].actButtonPressed()
             
 
-
 class Singleton(object):
     _instance = None
     def __new__(class_, *args, **kwargs):
         if not isinstance(class_._instance, class_):
             class_._instance = object.__new__(class_, *args, **kwargs)
-            db = QtSql.QSqlDatabase.addDatabase("QMYSQL")
-            db.setHostName("3.34.124.67")
-            db.setDatabaseName("15_10")
-            db.setUserName("15_10")
-            db.setPassword("1234")
-            ok = db.open()
-            print("database open : " + str(ok)) 
         return class_._instance
+    def __init__(self):
+        self.db = QtSql.QSqlDatabase.addDatabase("QMYSQL")
+        self.db.setHostName("3.34.124.67")
+        self.db.setDatabaseName("15_10")
+        self.db.setUserName("15_10")
+        self.db.setPassword("1234")
+        ok = self.db.open()
+        print("database open : " + str(ok)) 
 
 class Database(Singleton):
     def __init__(self):
+        super().__init__()
         # global db
         pass
 
@@ -443,7 +444,7 @@ class Database(Singleton):
     def command1Query(self,cmd,arg):
         self.query = QtSql.QSqlQuery("select * from command1")
         self.query.prepare("insert into command1 (time, cmd_string, arg_string, is_finish)\
-        values(:time, :cmd, :arg, :fsnish)");
+        values(:time, :cmd, :arg, :finish)");
         time = QDateTime().currentDateTime()
         self.query.bindValue(":time", time)
         self.query.bindValue(":cmd", cmd)

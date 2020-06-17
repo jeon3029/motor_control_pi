@@ -4,7 +4,7 @@ from PyQt5 import QtSql
 import time
 from Raspi_MotorHAT import Raspi_MotorHAT#, Raspi_DCMotor
 from sense_hat import SenseHat
-
+import time
 
 #motor init!!!
 mh = Raspi_MotorHAT(addr=0x6f)
@@ -40,7 +40,7 @@ class pollingThread(QThread):
 
 	def getQuery(self):
 		while True:
-			time.sleep(0.1)
+			time.sleep(0.2)
 			#----------------motor hat ----------------------
 			query = QtSql.QSqlQuery("select * from command1 order by time desc limit 1");
 			query.next()
@@ -49,7 +49,7 @@ class pollingThread(QThread):
 			cmdArg = query.record().value(2)
 			is_finish = query.record().value(3)
 
-			if is_finish == 0 :
+			if cmdTime!="" and is_finish == 0 :
               	#detect new command
 				print("motorhat control",cmdTime.toString(), cmdType, cmdArg)
 
@@ -76,13 +76,23 @@ class pollingThread(QThread):
           #--------------- sensehat----------------------
 			query = QtSql.QSqlQuery("select * from command2 order by time desc limit 1");
 			query.next()
-			cmdTime = query.record().value(0)
-			cmdText = query.record().value(1)
+			# cmdTime = query.record().value(0)
+			# cmdText = query.record().value(1)
 			is_finish = query.record().value(2)
-			count = query.record().value(3)
+			# count = query.record().value(3)
 			if is_finish == 0 :
 				#detect new command
-				print("sensehat control",cmdTime.toString(), cmdText, count)
+				time.sleep(4) # wait for longer command
+				query = QtSql.QSqlQuery("select * from command2 \
+					where is_finish = 0\
+					order by length(text) desc \
+					limit 1");
+				query.next()
+				cmdTime = query.record().value(0)
+				cmdText = query.record().value(1)
+				is_finish = query.record().value(2)
+				count = query.record().value(3)
+				print(cmdTime.toString(), cmdText, count)
 				#update
 				query = QtSql.QSqlQuery("update command2 set is_finish=1 where is_finish=0");
 				#sensehat
