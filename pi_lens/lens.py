@@ -425,24 +425,15 @@ class Singleton(object):
         if not isinstance(class_._instance, class_):
             class_._instance = object.__new__(class_, *args, **kwargs)
         return class_._instance
-    def __init__(self):
-        self.db = QtSql.QSqlDatabase.addDatabase("QMYSQL")
-        self.db.setHostName("3.34.124.67")
-        self.db.setDatabaseName("15_10")
-        self.db.setUserName("15_10")
-        self.db.setPassword("1234")
-        ok = self.db.open()
-        print("database open : " + str(ok)) 
-
+db = None
 class Database(Singleton):
     def __init__(self):
-        super().__init__()
-        # global db
         pass
 
     # for car control
     def command1Query(self,cmd,arg):
-        self.query = QtSql.QSqlQuery("select * from command1")
+        global db
+        self.query = QtSql.QSqlQuery("select * from command1",db = db)
         self.query.prepare("insert into command1 (time, cmd_string, arg_string, is_finish)\
         values(:time, :cmd, :arg, :finish)");
         time = QDateTime().currentDateTime()
@@ -454,7 +445,8 @@ class Database(Singleton):
 
     # for sensehat control
     def command2Query(self,text,cnt):
-        self.query = QtSql.QSqlQuery("select * from command2")
+        global db
+        self.query = QtSql.QSqlQuery("select * from command2",db = db)
         self.query.prepare("insert into command2 (time, text, is_finish,count)\
         values(:time, :text, :finish, :cnt)");
         time = QDateTime().currentDateTime()
@@ -494,6 +486,14 @@ def main():
     print("button init finished")
 
     # database init
+    global db
+    db = QtSql.QSqlDatabase.addDatabase("QMYSQL","command")
+    db.setHostName("3.34.124.67")
+    db.setDatabaseName("15_10")
+    db.setUserName("15_10")
+    db.setPassword("1234")
+    ok = db.open()
+    print("database open : " + str(ok)) 
     print("database init finished")
 
     # 무한반복
