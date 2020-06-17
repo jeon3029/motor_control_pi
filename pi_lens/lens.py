@@ -148,10 +148,10 @@ class VoiceComponent(Component):
         self.words_to_show=[]
         # 웹소켓 서버로 전달할 명령어 - words_to_show는 화면에서 사라지면 안되지만 command_list는 사용하면 소모됨
         self.command_list=[]
-        self.before=""
+
         # 레코딩 특성
         self.rate = 16000   # Hz
-        self.chunk = int(self.rate/10)   
+        self.chunk = int(self.rate/2)   
         self.encoding = 'LINEAR16'   # enums.RecognitionConfig.AudioEncoding.LINEAR16
         self.max_alternatives = 1
         #self.language_code = 'ko-KR'
@@ -191,10 +191,12 @@ class VoiceComponent(Component):
     def actButtonPressed(self):
         super().actButtonPressed()
         #버튼이 눌릴 때마다 새로운 오브젝트 생성.
-        mic_stream_thread = threading.Thread(target = self.doVoiceRecognition)
-        mic_stream_thread.start()
-        #TODO action버튼 다시 눌렀을 때 mic off처리
-
+        global mode_index
+        if mode_index == 2 or mode_index ==3:
+            mic_stream_thread = threading.Thread(target = self.doVoiceRecognition)
+            mic_stream_thread.start()
+        else:
+            pass
 
     def doVoiceRecognition(self):        
         # mic로부터 오디오스트림 생성      
@@ -299,6 +301,7 @@ class VoiceComponent(Component):
             # command_list와 words_to_show는 동일한 내용이지만 command_list는 사용 후 소모됨.
             self.command_list = self.words_to_show
             # TODO : db에 쿼리가 여러번 날아감
+            # TODO : 긴 문장 말할 때 앞에 문장 쿼리 먼저 날아감
             print('listen end')
             
             
