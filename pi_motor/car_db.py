@@ -13,8 +13,8 @@ speed = 70 #
 dcMotor.setSpeed(speed)
 servo = mh._pwm
 servo.setPWMFreq(60)
-R_limit = 260
-L_limit = 465
+R_limit = 300
+L_limit = 425
 mid_center = 365
 L_itv = L_limit-mid_center
 R_itv = R_limit-mid_center
@@ -101,6 +101,10 @@ class pollingThread(QThread):
 
 	def go(self):
 		print("MOTOR GO")
+		global speed
+		if speed < 50:
+			speed = 50
+			dcMotor.setSpeed(speed)
 		dcMotor.run(Raspi_MotorHAT.FORWARD)
 	#time.sleep(1)
 	#dcMotor.run(Raspi_MotorHAT.RELEASE)
@@ -133,7 +137,7 @@ class pollingThread(QThread):
 		if speed>=235:
 			speed = 255
 		else:
-			speed += 20
+			speed += 40
 		dcMotor.setSpeed(speed)
 		print("MOTOR FAST")
 
@@ -142,7 +146,7 @@ class pollingThread(QThread):
 		if speed<=25:
 			speed = 0
 		else:
-			speed -= 20
+			speed -= 40
 		dcMotor.setSpeed(speed)
 		print("MOTOR SLOW")
 
