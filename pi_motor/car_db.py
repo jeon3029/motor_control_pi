@@ -4,7 +4,6 @@ from PyQt5 import QtSql
 import time
 from Raspi_MotorHAT import Raspi_MotorHAT#, Raspi_DCMotor
 from sense_hat import SenseHat
-import time
 
 #motor init!!!
 mh = Raspi_MotorHAT(addr=0x6f)
@@ -23,7 +22,7 @@ print("motor init ok")
 sen = SenseHat()
 print("sensehat init ok")
 # TODO: 온도 정보 db에 전달
-
+cnt = 20
 class pollingThread(QThread):
 	def __init__(self):
 		super().__init__()
@@ -39,6 +38,8 @@ class pollingThread(QThread):
 		self.getQuery()
 
 	def getQuery(self):
+		global sen
+		global cnt
 		while True:
 			time.sleep(0.2)
 			#----------------motor hat ----------------------
@@ -96,8 +97,31 @@ class pollingThread(QThread):
 				#update
 				query = QtSql.QSqlQuery("update command2 set is_finish=1 where is_finish=0");
 				#sensehat
+				
 				for i in range(count):
 					sen.show_message(cmdText)
+			
+			if cnt == 20:
+				print(cnt)
+				cnt = 0
+				query = QtSql.QSqlQuery("select * from sensing")
+				query.prepare("insert into sensing \
+					(time,temp,humidity,is_finish)values\
+						(:time,:temp,:humidity,:finish)\
+					");
+				ctime = QDateTime().currentDateTime()
+				ctemp = round(sen.get_temperature(),2)
+				chum = round(sen.get_humidity(),2)
+				print(ctemp,chum)
+				query.bindValue(":time",ctime)
+				query.bindValue(":temp",ctemp)
+				query.bindValue(":humidity",chum)
+				query.bindValue(":finish",0)
+				query.exec()
+
+			else:
+				cnt += 1
+
 
 	def go(self):
 		print("MOTOR GO")
