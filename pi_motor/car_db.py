@@ -9,7 +9,7 @@ from sense_hat import SenseHat
 #motor init!!!
 mh = Raspi_MotorHAT(addr=0x6f)
 dcMotor = mh.getMotor(3)#
-speed = 125 #
+speed = 70 #
 dcMotor.setSpeed(speed)
 servo = mh._pwm
 servo.setPWMFreq(60)
@@ -69,6 +69,10 @@ class pollingThread(QThread):
 					self.mid()
 				elif cmdType == "stop":
 					self.stop()
+				elif cmdType == "fast":
+					self.fast()	
+				elif cmdType == "slow":
+					self.slow()
           #--------------- sensehat----------------------
 			query = QtSql.QSqlQuery("select * from command2 order by time desc limit 1");
 			query.next()
@@ -113,6 +117,24 @@ class pollingThread(QThread):
 	def mid(self):
 		steer(0)
 		print("MOTOR MID")
+
+	def fast(self):
+		global speed
+		if speed>=235:
+			speed = 255
+		else:
+			speed += 20
+		dcMotor.setSpeed(speed)
+		print("MOTOR FAST")
+
+	def slow(self):
+		global speed
+		if speed<=25:
+			speed = 0
+		else:
+			speed -= 20
+		dcMotor.setSpeed(speed)
+		print("MOTOR SLOW")
 
 
 
