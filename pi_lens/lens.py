@@ -136,10 +136,6 @@ class VoiceComponent(Component):
     
     def __init__(self):
         super().__init__()
-
-        # 마이크 활성화 여부 (버튼 눌러 토글 시킴)
-        self.is_mic_active = False
-
         # 이전에 해석된 내용이 담길 곳
         self.lasttime_you_said = [] 
         # 화면에 표시될 단어가 담길 곳
@@ -179,7 +175,7 @@ class VoiceComponent(Component):
             text = 'motor\n  control\n'+' '.join(self.words_to_show) + '\n...' # 마이크 작동중 표시 추가   
         # 마이크 버튼 눌리지 않았다면
         elif mode_index == 3:
-            text = 'sensehat\n  control'+' '.join(self.words_to_show) + '\n...' # 마이크 작동중 표시 추가   
+            text = 'sensehat\n  control\n'+' '.join(self.words_to_show) + '\n...' # 마이크 작동중 표시 추가   
         # 화면 폭에 맞추어 줄바꿈
         text = self.textMultiliner(text, font_small)
         # 화면 중앙에 정렬해 표시
@@ -198,9 +194,7 @@ class VoiceComponent(Component):
 
     def doVoiceRecognition(self):        
         # mic로부터 오디오스트림 생성      
-        MicStream = MicrophoneStream(self.rate, self.chunk)
-        
-        # 버튼이 다시 눌렸는지 감지(is_mic_active)해 입력 마치는 것으로...
+        MicStream = MicrophoneStream(self.rate, self.chunk)        
         try:
             with MicStream as stream:   
                 audio_generator = stream.generator()
@@ -232,9 +226,7 @@ class VoiceComponent(Component):
             # 확실성 가장 높은 alternative의 해석
             transcript = result.alternatives[0].transcript
             if mode_index == 2:
-                if(transcript.find("go")!=-1):
-                    Database().motor_control("go")
-                elif(transcript.find("left")!=-1):
+                if(transcript.find("left")!=-1):
                     Database().motor_control("left")
                 elif(transcript.find("right")!=-1):
                     Database().motor_control("right")
@@ -246,6 +238,10 @@ class VoiceComponent(Component):
                     Database().motor_control("fast")
                 elif(transcript.find("slow")!=-1):
                     Database().motor_control("slow")
+                elif(transcript.find("back")!=-1):
+                    Database().motor_control("back")
+                elif(transcript.find("go")!=-1):
+                    Database().motor_control("go")    
                 print(transcript)
             else:
                 #TODO : calc count
@@ -390,8 +386,10 @@ def buttonPressed(channel):
     if channel == MODE_BUTTON:  
         if mode_index == 0:
             mode_index = 1
+            print("Current Mode : Calendar")
         elif mode_index == 1:
             mode_index = 0
+            print("Current Mode : Clock")
         elif mode_index == 2:
             mode_index = 1
         else:
@@ -402,8 +400,10 @@ def buttonPressed(channel):
     # mic버튼 눌리면 현재의 mode.actButtonPressed() 실행
     if channel == ACT_BUTTON: # 0 to 2 & 1 to 3
         if mode_index == 0:
+            print("Current Mode : Motor Control")
             mode_index = 2
         elif mode_index == 1:
+            print("Current Mode : SenseHat Control")
             mode_index = 3
         elif mode_index == 2:
             mode_index = 0
