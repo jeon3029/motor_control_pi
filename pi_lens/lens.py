@@ -137,11 +137,11 @@ class VoiceComponent(Component):
     def __init__(self):
         super().__init__()
         # 이전에 해석된 내용이 담길 곳
-        self.lasttime_you_said = [] 
+        # self.lasttime_you_said = [] 
         # 화면에 표시될 단어가 담길 곳
-        self.words_to_show=[]
+        # self.words_to_show=[]
         # 웹소켓 서버로 전달할 명령어 - words_to_show는 화면에서 사라지면 안되지만 command_list는 사용하면 소모됨
-        self.command_list=[]
+        # self.command_list=[]
 
         # 레코딩 특성
         self.rate = 16000   # Hz
@@ -150,7 +150,7 @@ class VoiceComponent(Component):
         self.max_alternatives = 1
         #self.language_code = 'ko-KR'
         self.language_code = 'en-US'
-
+        self.tr = ""
         # google-cloud-speech request config 설정
         self.client = speech.SpeechClient()
         self.client_config = types.RecognitionConfig(
@@ -172,10 +172,10 @@ class VoiceComponent(Component):
         # 보이스 입력 작동중일땐 입력받은 내용 디스플레이
         global mode_index
         if mode_index == 2:   
-            text = 'motor\n  control\n'+' '.join(self.words_to_show) + '\n...' # 마이크 작동중 표시 추가   
+            text = 'motor\n  control\n'+' '.join(self.tr) + '\n...' # 마이크 작동중 표시 추가   
         # 마이크 버튼 눌리지 않았다면
         elif mode_index == 3:
-            text = 'sensehat\n  control\n'+' '.join(self.words_to_show) + '\n...' # 마이크 작동중 표시 추가   
+            text = 'sensehat\n  control\n'+' '.join(self.tr) + '\n...' # 마이크 작동중 표시 추가   
         # 화면 폭에 맞추어 줄바꿈
         text = self.textMultiliner(text, font_small)
         # 화면 중앙에 정렬해 표시
@@ -224,78 +224,78 @@ class VoiceComponent(Component):
                 continue
 
             # 확실성 가장 높은 alternative의 해석
-            transcript = result.alternatives[0].transcript
+            self.tr = result.alternatives[0].transcript
             if mode_index == 2:
-                if(transcript.find("left")!=-1):
+                if(self.tr.find("left")!=-1):
                     Database().motor_control("left")
-                elif(transcript.find("right")!=-1):
+                elif(self.tr.find("right")!=-1):
                     Database().motor_control("right")
-                elif(transcript.find("stop")!=-1):
+                elif(self.tr.find("stop")!=-1):
                     Database().motor_control("stop")
-                elif(transcript.find("mid")!=-1):
+                elif(self.tr.find("mid")!=-1):
                     Database().motor_control("mid")
-                elif(transcript.find("fast")!=-1):
+                elif(self.tr.find("fast")!=-1):
                     Database().motor_control("fast")
-                elif(transcript.find("slow")!=-1):
+                elif(self.tr.find("slow")!=-1):
                     Database().motor_control("slow")
-                elif(transcript.find("back")!=-1):
+                elif(self.tr.find("back")!=-1):
                     Database().motor_control("back")
-                elif(transcript.find("go")!=-1):
+                elif(self.tr.find("go")!=-1):
                     Database().motor_control("go")    
-                print(transcript)
+                print(self.tr)
             else:
                 #TODO : calc count
-                Database().mic_text(transcript,1)
-                print(transcript)
+                Database().mic_text(self.tr,1)
+                print(self.tr)
 
             # transcript 중 예전에 사용자에게 보여주었던 앞부분은 제외하고 변경이 있는부분, 추가된 부분만 보여주자.
-            tr = transcript.split() # transcript list화.
-            tr_words_count = len(tr) 
-            lasttime_words_count = len(self.lasttime_you_said)
+            # tr = self.tr.split() # transcript list화.
+            # tr_words_count = len(tr) 
+            # lasttime_words_count = len(self.lasttime_you_said)
 
-            # 만약 이전에 보여준게 없다면, 처음이라면
-            if self.lasttime_you_said == []:            
-                self.words_to_show = tr
-                self.lasttime_you_said = tr
+            # # 만약 이전에 보여준게 없다면, 처음이라면
+            # if self.lasttime_you_said == []:            
+            #     self.words_to_show = tr
+            #     self.lasttime_you_said = tr
 
-            # 변경된 내용이 없다면
-            elif tr == self.lasttime_you_said:
-				#pass
-                self.words_to_show = self.words_to_show
-                self.lasttime_you_said = self.lasttime_you_said
+            # # 변경된 내용이 없다면
+            # elif tr == self.lasttime_you_said:
+			# 	#pass
+            #     self.words_to_show = self.words_to_show
+            #     self.lasttime_you_said = self.lasttime_you_said
 
-            # 항목의 수가 줄어들었다면
-            elif tr_words_count < lasttime_words_count:
-                # 내용도 바뀌었다면
-                if tr != self.lasttime_you_said[:tr_words_count]:
-                    self.words_to_show=[] 
-                    for i in range(tr_words_count):    
-                        if tr[i] != self.lasttime_you_said[i]:  # 이전과 다른 항목이 있다면 self.workds_to_show에 추가한다.  
-                            self.words_to_show.append(tr[i]) 
-                # 항목이 줄어들었으나 내용이 같다면
-                else:
-                    pass       
+            # # 항목의 수가 줄어들었다면
+            # elif tr_words_count < lasttime_words_count:
+            #     # 내용도 바뀌었다면
+            #     if tr != self.lasttime_you_said[:tr_words_count]:
+            #         self.words_to_show=[] 
+            #         for i in range(tr_words_count):    
+            #             if tr[i] != self.lasttime_you_said[i]:  # 이전과 다른 항목이 있다면 self.workds_to_show에 추가한다.  
+            #                 self.words_to_show.append(tr[i]) 
+            #     # 항목이 줄어들었으나 내용이 같다면
+            #     else:
+            #         pass       
 
-                self.lasttime_you_said = tr 
+            #     self.lasttime_you_said = tr 
 
-            # 일반적인 경우 
-            else:    
-                # 동일한 부분은 무시하고 변경있는 부분만 복사             
+            # # 일반적인 경우 
+            # else:    
+            #     # 동일한 부분은 무시하고 변경있는 부분만 복사             
 
-                self.words_to_show=[] 
-                for i in range(lasttime_words_count):    
-                    if tr[i] != self.lasttime_you_said[i]:  # 이전과 다른 항목이 있다면 그곳부터
-                        break
-                    i += 1            # 다른 곳은 없지만 갯수가 늘었다면 늘어난 아이템부터
-                # self.words_to_show에 추가한다.
-                for j in range(i,tr_words_count):   
-                    self.words_to_show.append(tr[j])
+            #     self.words_to_show=[] 
+            #     for i in range(lasttime_words_count):    
+            #         if tr[i] != self.lasttime_you_said[i]:  # 이전과 다른 항목이 있다면 그곳부터
+            #             break
+            #         i += 1            # 다른 곳은 없지만 갯수가 늘었다면 늘어난 아이템부터
+            #     # self.words_to_show에 추가한다.
+            #     for j in range(i,tr_words_count):   
+            #         self.words_to_show.append(tr[j])
 
-                self.lasttime_you_said = tr 
-            # command_list와 words_to_show는 동일한 내용이지만 command_list는 사용 후 소모됨.
-            self.command_list = self.words_to_show
-            # TODO : db에 쿼리가 여러번 날아감
-            # TODO : 긴 문장 말할 때 앞에 문장 쿼리 먼저 날아감
+            #     self.lasttime_you_said = tr 
+            # # command_list와 words_to_show는 동일한 내용이지만 command_list는 사용 후 소모됨.
+            # self.command_list = self.words_to_show
+            # # TODO : db에 쿼리가 여러번 날아감
+            # # TODO : 긴 문장 말할 때 앞에 문장 쿼리 먼저 날아감
             print('listen end')
             
             
